@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "alzheimers-rag"
+version = "0.1.0"
+description = "A modular research retrieval pipeline for PubMed and PMC literature"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+ingestion = ["biopython>=1.84,<2", "requests>=2.32,<3"]
+models = ["numpy>=1.26,<3", "torch>=2.2,<3", "transformers>=4.40,<5", "nltk>=3.9,<4"]
+database = ["weaviate-client>=4.16,<5"]
+analysis = ["matplotlib>=3.8,<4", "pandas>=2.2,<4", "jupyterlab>=4,<5"]
+dev = ["ruff>=0.11,<1"]
+all = ["alzheimers-rag[ingestion,models,database,analysis]"]
+
+[project.scripts]
+alzheimers-rag = "alzheimers_rag.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I"]
