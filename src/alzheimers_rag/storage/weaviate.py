@@ -3,6 +3,7 @@
 from uuid import NAMESPACE_URL, uuid5
 
 from ..io import read_jsonl
+from ..provenance import source_metadata
 
 COLLECTION_NAME = "AlzheimersChunk"
 
@@ -23,6 +24,10 @@ def ensure_collection(client, name=COLLECTION_NAME):
         "parent_id": DataType.TEXT,
         "doc_id": DataType.TEXT,
         "doc_title": DataType.TEXT,
+        "pmid": DataType.TEXT,
+        "pmc_id": DataType.TEXT,
+        "doi": DataType.TEXT,
+        "source_url": DataType.TEXT,
         "text": DataType.TEXT,
         "section_type": DataType.TEXT,
         "heading_path": DataType.TEXT_ARRAY,
@@ -42,6 +47,7 @@ def chunk_properties(chunk):
     """Normalize older notebook artifacts at the storage boundary."""
     path = chunk.get("heading_path") or []
     return {
+        **source_metadata(chunk),
         "chunk_id": chunk["chunk_id"],
         "parent_id": chunk.get("parent_id"),
         "doc_id": chunk.get("doc_id"),

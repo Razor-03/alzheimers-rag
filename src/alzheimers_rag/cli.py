@@ -7,7 +7,7 @@ import os
 from dataclasses import replace
 from pathlib import Path
 
-from .config import DEFAULT_QUERY, DataPaths, RerankConfig, RetrievalConfig
+from .config import DEFAULT_QUERY, DataPaths, LLMConfig, RerankConfig, RetrievalConfig
 from .io import read_jsonl, write_jsonl
 
 
@@ -35,7 +35,7 @@ def parser():
         if name == "analyze":
             cmd.add_argument("--chart", type=Path)
     commands.add_parser("setup-nltk", help="Download the sentence tokenizer explicitly")
-    for name in ("index", "search", "prompt", "pool"):
+    for name in ("index", "search", "prompt", "pool", "query"):
         cmd = commands.add_parser(name)
         cmd.add_argument("--host", default="localhost")
         cmd.add_argument("--port", type=int, default=8080)
@@ -56,14 +56,46 @@ def parser():
         cmd.add_argument("--keyword")
         cmd.add_argument("--rerank", action="store_true")
         cmd.add_argument("--candidate-pool-size", type=int, default=30)
-        if name == "prompt":
+        if name in {"prompt", "query"}:
             cmd.add_argument("--context", choices=("child", "parent"), default="child")
+        if name == "query":
+            cmd.add_argument(
+                "--provider",
+                choices=("ollama", "openai-compatible"),
+                default=os.getenv("RAG_LLM_PROVIDER", "ollama"),
+            )
+            cmd.add_argument("--model", default=os.getenv("RAG_LLM_MODEL", ""))
+            cmd.add_argument("--base-url", default=os.getenv("RAG_LLM_BASE_URL"))
+            cmd.add_argument("--api-key-env", default="RAG_LLM_API_KEY")
+            cmd.add_argument("--context-window", type=int, default=8192)
+            cmd.add_argument("--context-token-budget", type=int, default=4096)
+            cmd.add_argument("--max-output-tokens", type=int, default=1024)
+            cmd.add_argument("--safety-tokens", type=int, default=128)
+            cmd.add_argument("--timeout", type=float, default=120)
     cmd = commands.add_parser("evaluate")
     cmd.add_argument("judgments", type=Path)
     return root
 
 
 def _database_command(args, paths):
+    llm_config = None
+    if args.command == "query":
+        base_url = args.base_url
+        if base_url is None:
+            if args.provider != "ollama":
+                raise ValueError("Set --base-url or RAG_LLM_BASE_URL for openai-compatible")
+            base_url = "http://localhost:11434"
+        llm_config = LLMConfig(
+            model=args.model,
+            provider=args.provider,
+            base_url=base_url,
+            api_key_env=args.api_key_env,
+            context_window=args.context_window,
+            context_token_budget=args.context_token_budget,
+            max_output_tokens=args.max_output_tokens,
+            safety_tokens=args.safety_tokens,
+            timeout=args.timeout,
+        )
     from .storage.weaviate import connect, index_children
 
     with connect(host=args.host, port=args.port, grpc_port=args.grpc_port) as client:
@@ -91,6 +123,32 @@ def _database_command(args, paths):
             write_judgment_sheet(rows, args.output)
             return {"candidates": len(rows), "output": str(args.output)}
         cfg = RetrievalConfig(args.top_k, args.alpha, args.section_type, args.keyword)
+        if args.command == "query":
+            from .generation import answer_question
+            from .llm import HTTPChatModel
+
+            parents = (
+                {p["parent_id"]: p for p in read_jsonl(paths.parents)}
+                if args.context == "parent"
+                else None
+            )
+            reranker = None
+            if args.rerank:
+                from .retrieval.reranking import MedCPTReranker
+
+                reranker = MedCPTReranker()
+            return answer_question(
+                args.query,
+                retriever,
+                HTTPChatModel(),
+                config=llm_config,
+                retrieval_config=cfg,
+                reranker=reranker,
+                parents=parents,
+                rerank_config=RerankConfig(
+                    candidate_pool_size=args.candidate_pool_size, rerank_top_k=args.top_k
+                ),
+            )
         search_cfg = replace(cfg, top_k=args.candidate_pool_size) if args.rerank else cfg
         hits = retriever.search(args.query, search_cfg)
         if args.rerank:

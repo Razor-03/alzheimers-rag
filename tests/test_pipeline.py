@@ -202,8 +202,19 @@ class PipelineTests(unittest.TestCase):
             RetrievalConfig(alpha=2)
 
     def test_imports_have_no_model_or_database_side_effects(self):
-        # This suite runs without any optional model, HTTP, or database packages installed.
+        # Web implementation modules require the optional API extra. Core modules,
+        # service configuration/runtime and the public API factory remain optional-free.
+        web_modules = (
+            "alzheimers_rag.api.main",
+            "alzheimers_rag.api.dependencies",
+            "alzheimers_rag.api.exception_handlers",
+            "alzheimers_rag.api.routers.",
+            "alzheimers_rag.api.schemas.",
+        )
+        has_api = importlib.util.find_spec("fastapi") is not None
         for module in pkgutil.walk_packages(alzheimers_rag.__path__, alzheimers_rag.__name__ + "."):
+            if not has_api and module.name.startswith(web_modules):
+                continue
             if not module.name.endswith(".__main__"):
                 importlib.import_module(module.name)
 
