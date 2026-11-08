@@ -136,6 +136,28 @@ alzheimers-rag evaluate data/evaluation/new_judgments.csv
 alzheimers-rag analyze --output data/charts/metrics.json --chart data/charts/corpus.png
 ```
 
+The `pool` command refuses to overwrite any existing judgment sheet; choose a new output
+filename for every pool. The four-method benchmark compares BM25, dense MedCPT, hybrid,
+and hybrid with MedCPT reranking using fresh rankings and the same questions/collection:
+
+```powershell
+# Copy and edit manifest.example.json with your frozen corpus provenance first.
+alzheimers-rag benchmark --collection YourExistingCollection `
+  --manifest data/evaluation/your-frozen-manifest.json `
+  --output data/evaluation/runs/retrieval-001
+```
+
+It saves JSON/CSV per-query Recall@K, MRR@K, graded nDCG@K, judgment coverage,
+stage latency, complete rankings and reproducibility metadata. `--answers --model MODEL`
+also generates responses and a human claim-label template. Human and optional LLM judge
+scores remain separate. Existing human labels are preserved. The answer review dataset
+contains ten unadjudicated research questions and one synthetic unanswerable control;
+it is not validated biomedical ground truth. **No live retrieval or generated-answer
+quality scores were measured for this increment.** See the
+[evaluation guide](docs/EVALUATION.md) for commands, metric definitions, annotation rubrics,
+offline rescoring, unexecuted experiments and read-only live smoke checks, and the
+[evaluation audit](docs/EVALUATION_AUDIT.md) for the original data inventory.
+
 The existing evaluation questions and judgment sheet have been copied from the research
 notebooks to `data/evaluation/`. Blank labels are reported and excluded without changing
 original ranks. Recall@k measures recall within the judged candidate pool, not the full
@@ -336,6 +358,11 @@ after the generation increment 39 offline tests passed and one live test was ski
 After the modular API refactor, 59 offline tests passed and two live tests were skipped.
 Ruff lint and formatting checks pass. With site-packages disabled, 45 tests passed and
 16 optional/live tests skipped, verifying operation without optional packages.
+For the evaluation increment on 2026-11-08, 89 tests ran: **87 passed, 2 live tests
+skipped, zero failures/errors**. Ruff 0.17.4 lint passed and formatting reported
+50 files already formatted. These checks used an existing Python 3.13.0 interpreter
+because the usual Python/venv launchers could not start. See the
+[exact evaluation verification and completion checklist](docs/EVALUATION_VERIFICATION.md).
 Python 3.11 is the supported minimum but was not separately
 executed in this environment. See [the audit record](docs/BASELINE_AUDIT.md) and
 [the proposed PR summary](docs/PR_SUMMARY.md).

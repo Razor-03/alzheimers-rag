@@ -50,7 +50,8 @@ def build_pool_for_question(question_id, question, retriever, parents, top_k=10)
 
 def write_judgment_sheet(rows, path):
     Path(path).parent.mkdir(parents=True, exist_ok=True)
-    with Path(path).open("w", newline="", encoding="utf-8") as handle:
+    # Exclusive creation protects even an all-blank sheet someone is annotating.
+    with Path(path).open("x", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=FIELDS)
         writer.writeheader()
         writer.writerows(rows)
@@ -65,8 +66,8 @@ def load_judgments(path):
             if not label:
                 skipped += 1
                 continue
-            if label not in {"0", "1"} or int(row["rank"]) < 1:
-                raise ValueError("Judgments require relevance 0/1 and a positive rank")
+            if label not in {"0", "1", "2"} or int(row["rank"]) < 1:
+                raise ValueError("Judgments require relevance 0/1/2 and a positive rank")
             grouped[(row["question_id"], row["granularity"])].append(
                 {
                     "candidate_id": row["candidate_id"],
@@ -84,14 +85,14 @@ def load_judgments(path):
 
 
 def recall_at_k(candidates, k):
-    relevant = sum(c["relevant"] == 1 for c in candidates)
+    relevant = sum(c["relevant"] > 0 for c in candidates)
     if not relevant:
         return None
-    return sum(c["relevant"] == 1 and c["rank"] <= k for c in candidates) / relevant
+    return sum(c["relevant"] > 0 and c["rank"] <= k for c in candidates) / relevant
 
 
 def mrr(candidates):
-    ranks = [c["rank"] for c in candidates if c["relevant"] == 1]
+    ranks = [c["rank"] for c in candidates if c["relevant"] > 0]
     return 1 / min(ranks) if ranks else 0.0
 
 

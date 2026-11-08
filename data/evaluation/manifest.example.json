@@ -1,0 +1,10 @@
+{
+  "dataset_version": "retrieval-questions-v1",
+  "corpus_version": "REPLACE_WITH_YOUR_FROZEN_CORPUS_VERSION",
+  "article_encoder": "ncbi/MedCPT-Article-Encoder",
+  "article_revision": "unknown",
+  "article_pooling": "cls",
+  "article_normalize": false,
+  "generation_revision": "not_executed",
+  "notes": "Template only. Verify article settings against indexing provenance. Record checkpoint/deployment digests when available; unknown means unrecoverable provenance, not a verified revision."
+}

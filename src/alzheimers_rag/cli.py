@@ -6,12 +6,14 @@ import logging
 import os
 from dataclasses import replace
 from pathlib import Path
+
 from dotenv import load_dotenv
 
 from .config import DEFAULT_QUERY, DataPaths, LLMConfig, RerankConfig, RetrievalConfig
 from .io import read_jsonl, write_jsonl
 
 load_dotenv()
+
 
 def parser():
     root = argparse.ArgumentParser(description=__doc__)
@@ -76,10 +78,15 @@ def parser():
             cmd.add_argument("--timeout", type=float, default=120)
     cmd = commands.add_parser("evaluate")
     cmd.add_argument("judgments", type=Path)
+    from .evaluation_cli import add_commands
+
+    add_commands(commands)
     return root
 
 
 def _database_command(args, paths):
+    if args.command == "pool" and args.output.exists():
+        raise FileExistsError(f"Judgment sheet exists: {args.output}; choose a new --output")
     llm_config = None
     if args.command == "query":
         base_url = args.base_url
@@ -175,6 +182,10 @@ def _database_command(args, paths):
 
 def run(args):
     paths = DataPaths(args.data_dir)
+    if args.command in {"benchmark", "score-retrieval", "evaluate-answers", "judge-answers"}:
+        from .evaluation_cli import run_evaluation
+
+        return run_evaluation(args, paths)
     if args.command in {"fetch-pmc", "fetch-abstracts"}:
         from .ingestion.pubmed import PubMedClient
 

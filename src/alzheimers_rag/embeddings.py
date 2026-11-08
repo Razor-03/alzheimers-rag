@@ -11,15 +11,24 @@ def article_input(chunk):
 
 
 class MedCPTEncoder:
-    def __init__(self, model_name=ARTICLE_MODEL, *, device=None, pooling="cls", normalize=False):
+    def __init__(
+        self,
+        model_name=ARTICLE_MODEL,
+        *,
+        device=None,
+        pooling="cls",
+        normalize=False,
+        revision=None,
+    ):
         import torch
         from transformers import AutoModel, AutoTokenizer
 
         if pooling not in {"cls", "mean"}:
             raise ValueError("pooling must be cls or mean")
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.tokenizer = AutoTokenizer.from_pretrained(model_name)
-        self.model = AutoModel.from_pretrained(model_name).to(self.device).eval()
+        options = {"revision": revision} if revision is not None else {}
+        self.tokenizer = AutoTokenizer.from_pretrained(model_name, **options)
+        self.model = AutoModel.from_pretrained(model_name, **options).to(self.device).eval()
         self.pooling, self.normalize = pooling, normalize
 
     def encode(self, inputs, *, batch_size=20, max_length=512):

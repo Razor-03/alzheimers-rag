@@ -4,13 +4,14 @@ from ..config import RERANK_MODEL, RerankConfig
 
 
 class MedCPTReranker:
-    def __init__(self, *, device=None):
+    def __init__(self, *, device=None, revision=None):
         import torch
         from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
-        self.tokenizer = AutoTokenizer.from_pretrained(RERANK_MODEL)
-        self.model = AutoModelForSequenceClassification.from_pretrained(RERANK_MODEL)
+        options = {"revision": revision} if revision is not None else {}
+        self.tokenizer = AutoTokenizer.from_pretrained(RERANK_MODEL, **options)
+        self.model = AutoModelForSequenceClassification.from_pretrained(RERANK_MODEL, **options)
         self.model.to(self.device).eval()
 
     def rerank(self, query, hits, config=None):
