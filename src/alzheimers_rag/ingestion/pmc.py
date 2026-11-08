@@ -40,12 +40,18 @@ def download_papers(pmcids, output_path, *, session=None):
     def records():
         for pmcid in dict.fromkeys(pmcids):
             pmcid = "PMC" + str(pmcid).upper().removeprefix("PMC")
-            response = session.get(f"{BIOC_URL}/BioC_json/{pmcid}/unicode", timeout=30)
-            time.sleep(0.34)
-            if response.status_code in (403, 404):
-                logger.warning("Skipping unavailable open-access paper %s", pmcid)
+            try:
+                response = session.get(f"{BIOC_URL}/BioC_json/{pmcid}/unicode", timeout=30)
+                if response.status_code in (403, 404):
+                    logger.warning("Skipping unavailable open-access paper %s", pmcid)
+                    continue
+                response.raise_for_status()
+                record = response.json()
+            except (requests.RequestException, ValueError) as exc:
+                logger.warning("Skipping paper %s: %s", pmcid, exc)
                 continue
-            response.raise_for_status()
-            yield response.json()
+            finally:
+                time.sleep(0.34)
+            yield record
 
     return write_jsonl(records(), output_path)

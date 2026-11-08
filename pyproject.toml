@@ -8,7 +8,9 @@ version = "0.1.0"
 description = "A modular research retrieval pipeline for PubMed and PMC literature"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "dotenv>=0.9.9",
+]
 
 [project.optional-dependencies]
 ingestion = ["biopython>=1.84,<2", "requests>=2.32,<3"]

@@ -6,10 +6,12 @@ import logging
 import os
 from dataclasses import replace
 from pathlib import Path
+from dotenv import load_dotenv
 
 from .config import DEFAULT_QUERY, DataPaths, LLMConfig, RerankConfig, RetrievalConfig
 from .io import read_jsonl, write_jsonl
 
+load_dotenv()
 
 def parser():
     root = argparse.ArgumentParser(description=__doc__)
